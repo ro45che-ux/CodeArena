@@ -16,6 +16,12 @@ public class Problem {
 
     private String difficulty;
 
+    @Column(length = 5000)
+    private String solutionTemplate;
+
+    @Column(length = 5000)
+    private String driverCode;
+
     // getters setters
 
     public Long getId() {
@@ -48,6 +54,22 @@ public class Problem {
 
     public void setDifficulty(String difficulty) {
         this.difficulty = difficulty;
+    }
+
+    public String getSolutionTemplate() {
+        return solutionTemplate;
+    }
+
+    public void setSolutionTemplate(String solutionTemplate) {
+        this.solutionTemplate = solutionTemplate;
+    }
+
+    public String getDriverCode() {
+        return driverCode;
+    }
+
+    public void setDriverCode(String driverCode) {
+        this.driverCode = driverCode;
     }
 }
 

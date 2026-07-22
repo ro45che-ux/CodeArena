@@ -35,6 +35,7 @@ public class SubmissionService {
 
             String output = codeRunnerService.runCode(
                     submission.getCode(),
+                    tc.getProblem().getDriverCode(),
                     tc.getInput()
             );
 

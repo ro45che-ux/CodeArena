@@ -9,7 +9,10 @@ public class Submission {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(length = 5000)
     private String userOutput;
+    
+    @Column(length = 5000)
     private String code;
     private boolean passed;
     private SubmissionStatus status;
@@ -21,13 +24,23 @@ public class Submission {
     private int score;
     // getters setters
     private int passedCount;
-private int totalCount;
+    private int totalCount;
+    private long executionTimeMs;
+
     public Long getId() {
         return id;
     }
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public long getExecutionTimeMs() {
+        return executionTimeMs;
+    }
+
+    public void setExecutionTimeMs(long executionTimeMs) {
+        this.executionTimeMs = executionTimeMs;
     }
 
     public String getUserOutput() {

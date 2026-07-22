@@ -1,29 +1,3 @@
-/*package com.platform.backend.controller;
-
-import com.platform.backend.dto.UserScoreDTO;
-import com.platform.backend.entity.Submission;
-import com.platform.backend.repository.SubmissionRepository;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-@RestController
-@CrossOrigin(origins = "http://localhost:3000")
-@RequestMapping("/leaderboard")
-public class LeaderboardController {
-
-    private final SubmissionRepository submissionRepository;
-
-    public LeaderboardController(SubmissionRepository submissionRepository) {
-        this.submissionRepository = submissionRepository;
-    }
-
-    @GetMapping
-public List<UserScoreDTO> leaderboard() {
-    return submissionRepository.getLeaderboard();
-}
-}*/
-
 package com.platform.backend.controller;
 
 import java.util.*;
@@ -69,7 +43,7 @@ public class LeaderboardController {
                     if (b.getScore() != a.getScore()) {
                         return b.getScore() - a.getScore();
                     }
-                    return a.getPassedCount() - b.getPassedCount(); // tie-break
+                    return Long.compare(a.getExecutionTimeMs(), b.getExecutionTimeMs()); // faster wins
                 })
                 .collect(Collectors.toList());
     }

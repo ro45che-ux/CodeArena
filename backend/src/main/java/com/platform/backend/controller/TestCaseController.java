@@ -31,5 +31,17 @@ public class TestCaseController {
 
         return testCaseRepository.save(testCase);
     }
+
+    // Get non-hidden test cases (examples) for display on problem page
+    @GetMapping("/{problemId}")
+    public java.util.List<java.util.Map<String, String>> getExampleTestCases(@PathVariable Long problemId) {
+        return testCaseRepository.findByProblemId(problemId).stream()
+                .filter(tc -> !tc.isHidden())
+                .map(tc -> java.util.Map.of(
+                        "input", tc.getInput() != null ? tc.getInput() : "",
+                        "expectedOutput", tc.getExpectedOutput() != null ? tc.getExpectedOutput() : ""
+                ))
+                .collect(java.util.stream.Collectors.toList());
+    }
 }
 

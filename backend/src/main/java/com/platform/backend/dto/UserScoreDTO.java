@@ -7,7 +7,6 @@ public class UserScoreDTO {
 
     public UserScoreDTO(Long userId, Long solved) {
         this.userId = userId;
-        this.userId = userId;
         this.solved = solved;
     }
 

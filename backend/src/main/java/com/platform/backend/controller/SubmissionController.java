@@ -115,10 +115,21 @@ public class SubmissionController {
         s.setProblem(problem);
         s.setCode(code); // ✅ FIX (store actual code)
 
+        long totalTimeMs = 0;
+        String driverCode = problem.getDriverCode();
+
         for (TestCase tc : testCases) {
 
             try {
-                String output = runner.runCode(code, tc.getInput());
+                long start = System.nanoTime();
+                String output = runner.runCode(code, driverCode, tc.getInput());
+                long elapsed = (System.nanoTime() - start) / 1_000_000;
+                totalTimeMs += elapsed;
+
+                if ("TIME_LIMIT_EXCEEDED".equals(output)) {
+                    s.setStatus(SubmissionStatus.TIME_LIMIT_EXCEEDED);
+                    break;
+                }
 
                 if (output != null &&
                     output.trim().equals(tc.getExpectedOutput().trim())) {
@@ -126,6 +137,7 @@ public class SubmissionController {
                 }
 
             } catch (Exception e) {
+                e.printStackTrace();
                 s.setStatus(SubmissionStatus.ERROR);
             }
         }
@@ -134,13 +146,15 @@ public class SubmissionController {
 
         s.setPassedCount(passed);
         s.setTotalCount(total);
+        s.setExecutionTimeMs(totalTimeMs);
 
         // ✅ SCORE (percentage)
         int score = (passed * 100) / total;
         s.setScore(score);
 
         // ✅ STATUS LOGIC
-        if (s.getStatus() != SubmissionStatus.ERROR) {
+        if (s.getStatus() != SubmissionStatus.ERROR
+                && s.getStatus() != SubmissionStatus.TIME_LIMIT_EXCEEDED) {
             if (passed == total) {
                 s.setStatus(SubmissionStatus.ACCEPTED);
             } else {
