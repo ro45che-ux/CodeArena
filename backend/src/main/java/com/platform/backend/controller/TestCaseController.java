@@ -9,7 +9,7 @@ import com.platform.backend.repository.ProblemRepository;
 
 @RestController
 @RequestMapping("/testcases")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class TestCaseController {
 
     private final TestCaseRepository testCaseRepository;

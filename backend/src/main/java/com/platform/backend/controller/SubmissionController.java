@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/submissions")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class SubmissionController {
 
     private final SubmissionRepository submissionRepository;
@@ -75,7 +75,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/submissions")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class SubmissionController {
 
     private final SubmissionRepository submissionRepository;
