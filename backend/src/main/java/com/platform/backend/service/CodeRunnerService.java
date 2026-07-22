@@ -92,10 +92,10 @@ public class CodeRunnerService {
             Files.write(javaFile.toPath(), wrappedCode.getBytes());
 
             // compile
-            Process compile =
-                    new ProcessBuilder("javac", javaFile.getAbsolutePath())
-                            .directory(tempDir)
-                            .start();
+            ProcessBuilder compilePb = new ProcessBuilder("javac", javaFile.getAbsolutePath())
+                    .directory(tempDir);
+            compilePb.environment().remove("JAVA_TOOL_OPTIONS");
+            Process compile = compilePb.start();
 
             boolean compiled = compile.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
             if (!compiled) {
@@ -107,11 +107,11 @@ public class CodeRunnerService {
             }
 
             // run
-            Process run =
-                    new ProcessBuilder("java", "Solution")
-                            .directory(tempDir)
-                            .redirectErrorStream(true)
-                            .start();
+            ProcessBuilder runPb = new ProcessBuilder("java", "Solution")
+                    .directory(tempDir)
+                    .redirectErrorStream(true);
+            runPb.environment().remove("JAVA_TOOL_OPTIONS");
+            Process run = runPb.start();
 
             // input pass
             BufferedWriter writer = new BufferedWriter(

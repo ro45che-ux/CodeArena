@@ -43,6 +43,7 @@ public class SubmissionService {
                 output.trim().equals(tc.getExpectedOutput().trim())) {
                 passed++;
             }
+            submission.setUserOutput(output);
         }
 
         int total = testCases.size();
