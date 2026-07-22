@@ -1,111 +1,92 @@
-#  CodeArena – Coding Platform
+# 🏆 CodeArena | Full-Stack LeetCode Clone
 
-A full-stack coding platform built using **Spring Boot** and **React**, where users can solve problems, submit code, and get evaluated against test cases with a dynamic leaderboard system.
+![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
----
+**CodeArena** is a full-stack, production-ready online coding judge (similar to LeetCode). It enables users to securely write, compile, and execute Java code against hidden test cases in real-time, with a dynamic leaderboard ranking system.
 
-##  Features
-
-*  Code Execution Engine** – Executes user-submitted code dynamically using Java ProcessBuilder
-*  Test Case Evaluation** – Validates code against multiple test cases
-*  Leaderboard System** – Ranks users based on best submission scores
-*  JWT Authentication** – Secure APIs with token-based authentication
-*  REST APIs** – Clean backend architecture using Spring Boot
-*  Interactive UI** – Simple React interface for problem solving
+### 🌐 Live Demo
+👉 **[View the Live Platform](https://code-arena-frontend.onrender.com)**
 
 ---
 
-##  Tech Stack
+## 🚀 Key Features
 
-### Backend
-
-* Java
-* Spring Boot
-* Spring Security (JWT)
-* JPA / Hibernate
-
-### Frontend
-
-* React
-* JavaScript
-* CSS
-
-### Database
-
-* H2 (Development)
-* MySQL (Optional for production)
+* **Secure Code Execution Engine** – Dynamically compiles and executes user-submitted Java code using `ProcessBuilder` with strict timeouts and isolated temporary workspaces.
+* **Automated Test Case Evaluation** – Validates user output against multiple hidden test cases directly from the PostgreSQL database.
+* **Global Leaderboard** – Ranks users dynamically using `O(n log n)` sorting based on highest scores and lowest execution times.
+* **Stateless Authentication** – Secured REST APIs using **Spring Security**, **JWT (HS256)**, and **BCrypt** password hashing.
+* **Dockerized Deployment** – Fully containerized multi-tier architecture, currently hosted live on **Render**.
 
 ---
 
-##  How It Works
+## 💻 Tech Stack
 
-1. User logs in and receives a JWT token
-2. User selects a problem and submits code
-3. Backend executes code using a runtime environment
-4. Output is validated against test cases
-5. Score is calculated and stored
-6. Leaderboard updates with best submissions
+### **Backend**
+* Java 21
+* Spring Boot 3
+* Spring Security (JWT + BCrypt)
+* Spring Data JPA (Hibernate)
 
----
+### **Frontend**
+* React.js
+* TailwindCSS / Vanilla CSS
+* REST API Integration
 
-##  Project Structure
-
-```
-coding-platform/
-│
-├── backend/       # Spring Boot application
-│
-├── frontend/      # React application
-│
-└── README.md
-```
+### **Database & DevOps**
+* PostgreSQL
+* Docker & Docker Compose
+* Nginx (Frontend Serving)
+* Render (Cloud Deployment)
 
 ---
 
-##  Running Locally
+## ⚙️ Architecture & Execution Flow
 
-### Backend
+1. **Submit:** User submits code via the React frontend.
+2. **Authenticate:** Backend intercepts the request and validates the JWT using a custom `OncePerRequestFilter`.
+3. **Sandbox Setup:** The `CodeRunnerService` creates an isolated temporary directory for the submission.
+4. **Compile & Execute:** `ProcessBuilder` spawns a `javac` process to compile the code, and a `java` process to run it. The JVM's `JAVA_TOOL_OPTIONS` are scrubbed to prevent output pollution.
+5. **Evaluate:** Standard I/O streams inject hidden test cases and capture the output. Timeouts (e.g., 5 seconds) are strictly enforced to prevent infinite loops (`while(true)`).
+6. **Score:** Results are aggregated, saved to the PostgreSQL database, and the Global Leaderboard is updated instantly.
 
+---
+
+## 🛠️ Local Setup Instructions
+
+You can run the entire platform on your local machine using a single Docker command!
+
+### Prerequisites
+* [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+
+### 1. Clone the Repository
 ```bash
-cd backend
-./mvnw spring-boot:run
+git clone https://github.com/ro45che-ux/CodeArena.git
+cd CodeArena
 ```
 
-### Frontend
-
+### 2. Start the Application
 ```bash
-cd frontend
-npm install
-npm start
+docker compose up --build -d
+```
+*This command will automatically download PostgreSQL, build the Spring Boot backend, and build the React frontend.*
+
+### 3. Access the Platform
+* **Frontend:** `http://localhost:3000`
+* **Backend API:** `http://localhost:8080`
+* **Database (Postgres):** `localhost:5432`
+
+### 4. Stop the Application
+```bash
+docker compose down
 ```
 
 ---
 
-##  Authentication
-
-* Login via `/auth/login`
-* JWT token is required for protected APIs (like submissions)
-
----
-
-##  Limitations
-
-* Code execution currently supports Java only
-* Runs locally (not sandboxed like production systems)
-* Deployment requires environment setup
-
----
-
-##  Future Improvements
-
-* Multi-language support (C++, Python)
-* Docker-based secure execution
-* Time & memory limits
-* Public + hidden test cases
-* Improved UI/UX
-
----
-
-## ⭐ Final Note
-
-This project demonstrates backend system design, API development, and real-world problem evaluation logic similar to platforms like LeetCode or CodeChef.
+## 📖 Future Improvements
+- [ ] Add support for multiple languages (Python, C++).
+- [ ] Implement advanced containerized sandboxing per submission (e.g., Isolate/gVisor).
+- [ ] Add explicit memory-limit tracking.
