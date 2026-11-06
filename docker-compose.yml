@@ -1,15 +1,19 @@
 version: '3.8'
 
+# Configuration comes from a .env file next to this one (copy .env.example to .env).
+# Every variable has a development default, so `docker compose up --build` works out of the box;
+# set real values before exposing anything to the internet.
+
 services:
   db:
     image: postgres:15-alpine
     container_name: coding_platform_db
     environment:
-      POSTGRES_PASSWORD: postgres
       POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: coding_platform
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"   # reachable from this machine only
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./db:/docker-entrypoint-initdb.d
@@ -26,11 +30,16 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/coding_platform
       - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      # Empty = random secret generated at start-up (users are logged out on restart).
+      - JWT_SECRET=${JWT_SECRET:-}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
 
   frontend:
     build:
       context: ./frontend
+      args:
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8080}
     container_name: coding_platform_frontend
     ports:
       - "3000:80"

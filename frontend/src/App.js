@@ -24,7 +24,19 @@ const TrophyIcon = () => (
 );
 
 // --- API Helper ---
-const API_BASE = 'https://code-arena-backend-ve3a.onrender.com';
+// Override at build time with REACT_APP_API_URL (e.g. http://localhost:8080 for local development).
+const API_BASE = process.env.REACT_APP_API_URL || 'https://code-arena-backend-ve3a.onrender.com';
+
+// The backend reports errors as {"error": "..."}; fall back to plain text for anything else.
+const readErrorMessage = async (response) => {
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    return data.error || data.detail || data.message || text;
+  } catch (e) {
+    return text;
+  }
+};
 
 const apiCall = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
@@ -50,17 +62,18 @@ const apiCall = async (endpoint, options = {}) => {
     headers,
   });
 
-  if (response.status === 401) {
+  // 401 on a normal call means the session expired. On the login/register calls it just means
+  // "wrong credentials", which must be shown to the user instead of reloading the page.
+  if (response.status === 401 && token && !endpoint.startsWith('/auth/')) {
     localStorage.removeItem('token');
     localStorage.removeItem('userId');
     localStorage.removeItem('userName');
     window.location.reload();
-    throw new Error('Unauthorized');
+    throw new Error('Your session has expired. Please log in again.');
   }
 
   if (!response.ok) {
-    const errorData = await response.text();
-    throw new Error(errorData || 'API Error');
+    throw new Error((await readErrorMessage(response)) || 'Request failed');
   }
 
   try {
@@ -301,26 +314,23 @@ const SolvePage = ({ problem, onBack }) => {
     setSubmitting(true);
     setResult(null);
     try {
-      const userId = localStorage.getItem('userId');
-      const res = await apiCall(`/submissions/${problem.id}/${userId}`, {
+      // The server identifies the user from the login token; no user id is sent.
+      const res = await apiCall(`/submissions/${problem.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: code
       });
-      setResult(res || {
-        status: 'ACCEPTED',
-        score: 100,
-        passedCases: 10,
-        totalCases: 10,
-        executionTimeMs: 42
-      });
+      if (!res) {
+        throw new Error('The server returned an empty response. Please try again.');
+      }
+      setResult(res);
     } catch (err) {
       console.error(err);
       setResult({
         status: 'ERROR',
         score: 0,
-        passedCases: 0,
-        totalCases: 10,
+        passedCount: 0,
+        totalCount: 0,
         executionTimeMs: 0,
         message: err.message
       });

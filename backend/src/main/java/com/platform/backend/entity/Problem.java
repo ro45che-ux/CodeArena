@@ -1,5 +1,7 @@
 package com.platform.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -19,10 +21,10 @@ public class Problem {
     @Column(length = 5000)
     private String solutionTemplate;
 
+    /** Judge-side code that reads stdin and calls the user's function. Never sent to clients. */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     @Column(length = 5000)
     private String driverCode;
-
-    // getters setters
 
     public Long getId() {
         return id;
@@ -72,4 +74,3 @@ public class Problem {
         this.driverCode = driverCode;
     }
 }
-

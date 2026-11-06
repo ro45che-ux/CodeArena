@@ -1,5 +1,7 @@
 package com.platform.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import jakarta.persistence.*;
 
 @Entity
@@ -11,21 +13,30 @@ public class Submission {
 
     @Column(length = 5000)
     private String userOutput;
-    
+
     @Column(length = 5000)
     private String code;
+
     private boolean passed;
+
     private SubmissionStatus status;
+
+    /** Only the display name is exposed; email, role and password hash never leave the server. */
     @ManyToOne
+    @JsonIgnoreProperties({"email", "role", "password"})
     private User user;
 
     @ManyToOne
     private Problem problem;
+
     private int score;
-    // getters setters
     private int passedCount;
     private int totalCount;
     private long executionTimeMs;
+
+    /** Human readable detail (compiler error, failing test, ...). Returned to the client, not stored. */
+    @Transient
+    private String message;
 
     public Long getId() {
         return id;
@@ -74,42 +85,52 @@ public class Submission {
     public void setProblem(Problem problem) {
         this.problem = problem;
     }
+
     public int getScore() {
         return score;
     }
-    
+
     public void setScore(int score) {
         this.score = score;
     }
+
     public int getPassedCount() {
         return passedCount;
     }
-    
+
     public void setPassedCount(int passedCount) {
         this.passedCount = passedCount;
     }
-    
+
     public int getTotalCount() {
         return totalCount;
     }
-    
+
     public void setTotalCount(int totalCount) {
         this.totalCount = totalCount;
     }
+
     public String getCode() {
         return code;
     }
-    
+
     public void setCode(String code) {
         this.code = code;
     }
+
     public SubmissionStatus getStatus() {
         return status;
     }
-    
+
     public void setStatus(SubmissionStatus status) {
         this.status = status;
     }
-    
-}
 
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+}

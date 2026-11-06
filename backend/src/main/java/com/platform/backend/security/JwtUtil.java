@@ -1,51 +1,69 @@
 package com.platform.backend.security;
 
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.security.SecureRandom;
+import java.util.Date;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
-import java.security.Key;
-import java.util.Date;
-
+/**
+ * Creates and validates JWTs. The signing secret comes from configuration ({@code JWT_SECRET}); it
+ * must never be committed to the repository. If it is missing or too short a random secret is
+ * generated at start-up, which is safe but invalidates all tokens on every restart.
+ */
+@Component
 public class JwtUtil {
 
-    private static final String SECRET =
-            "this_is_my_super_long_secret_key_for_hs256_jwt_generation_123456";
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
+    private static final int MIN_SECRET_BYTES = 32; // HS256 needs at least 256 bits
 
-    private static final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private final Key key;
+    private final long expirationMs;
 
-    // ✅ generate token
-    public static String generateToken(String email) {
+    public JwtUtil(@Value("${app.jwt.secret:}") String secret,
+                   @Value("${app.jwt.expiration-ms:86400000}") long expirationMs) {
+        byte[] bytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
+        if (bytes.length < MIN_SECRET_BYTES) {
+            log.warn("JWT_SECRET is not set (or shorter than {} bytes). Using a random secret for this "
+                    + "run; all users will be logged out on every restart. Set JWT_SECRET in production.",
+                    MIN_SECRET_BYTES);
+            bytes = new byte[64];
+            new SecureRandom().nextBytes(bytes);
+        }
+        this.key = Keys.hmacShaKeyFor(bytes);
+        this.expirationMs = expirationMs;
+    }
+
+    public String generateToken(String email) {
+        long now = System.currentTimeMillis();
         return Jwts.builder()
                 .setSubject(email)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 86400000))
+                .setIssuedAt(new Date(now))
+                .setExpiration(new Date(now + expirationMs))
                 .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // ✅ extract username/email
-    public static String extractEmail(String token) {
-        return getClaims(token).getSubject();
-    }
-
-    // ✅ validate token
-    public static boolean isTokenValid(String token) {
+    /** Returns the email (subject) of a valid token, or null if the token is invalid or expired. */
+    public String validateAndExtractEmail(String token) {
         try {
-            getClaims(token);
-            return true;
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return claims.getSubject();
         } catch (Exception e) {
-            return false;
+            return null;
         }
-    }
-
-    // 🔧 helper
-    private static Claims getClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
     }
 }

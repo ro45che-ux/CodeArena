@@ -4,7 +4,9 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 COPY . .
-# You can pass REACT_APP_API_URL during build time if deploying to production
+# Backend URL baked into the bundle. If left empty the app falls back to its built-in default.
+ARG REACT_APP_API_URL=""
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
 RUN npm run build
 
 # Serve stage using Nginx
