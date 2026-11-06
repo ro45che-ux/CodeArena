@@ -14,9 +14,10 @@ describe('filterProblems', () => {
   test('filters by difficulty', () => {
     expect(filterProblems(problems, { difficulty: 'HARD' }).map((p) => p.id)).toEqual([3]);
   });
-  test('searches title and description, ignoring case', () => {
-    expect(filterProblems(problems, { query: 'COINS' }).map((p) => p.id)).toEqual([2]);
+  test('searches the title, ignoring case', () => {
+    expect(filterProblems(problems, { query: 'COIN' }).map((p) => p.id)).toEqual([2]);
     expect(filterProblems(problems, { query: 'two' }).map((p) => p.id)).toEqual([1]);
+    expect(filterProblems(problems, { query: 'elevation' })).toHaveLength(0); // descriptions are not searched
   });
   test('filters by progress status', () => {
     expect(filterProblems(problems, { status: 'SOLVED' }, progress).map((p) => p.id)).toEqual([1]);

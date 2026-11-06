@@ -115,7 +115,6 @@ const ProblemsPage = ({ onSolve }) => {
                   </span>
                   <span className={`difficulty-badge diff-${prob.difficulty}`}>{prob.difficulty}</span>
                 </div>
-                <div className="problem-desc-preview">{prob.description}</div>
                 <div className="problem-footer problem-footer-split">
                   <span className="problem-meta">
                     {s ? `${s.acceptanceRate}% accepted · ${s.submissions} submissions` : 'No submissions yet'}

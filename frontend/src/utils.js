@@ -16,7 +16,7 @@ export const filterProblems = (problems, { query = '', difficulty = 'ALL', statu
 
   return problems.filter((p) => {
     if (difficulty !== 'ALL' && p.difficulty !== difficulty) return false;
-    if (q && !(`${p.title} ${p.description || ''}`.toLowerCase().includes(q))) return false;
+    if (q && !p.title.toLowerCase().includes(q)) return false;
     if (status === 'SOLVED') return solved.has(p.id);
     if (status === 'ATTEMPTED') return attempted.has(p.id) && !solved.has(p.id);
     if (status === 'TODO') return !attempted.has(p.id);

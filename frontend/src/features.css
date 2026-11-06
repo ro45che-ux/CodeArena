@@ -62,6 +62,8 @@
 
 .problem-footer-split { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
 .problem-meta { font-size: 0.8rem; color: var(--text-secondary); }
+.problem-footer-split .solve-btn { white-space: nowrap; }
+.problem-card .problem-footer { margin-top: 1.25rem; }
 
 /* ---- Solve page ------------------------------------------------------------------------- */
 .tab-bar {
