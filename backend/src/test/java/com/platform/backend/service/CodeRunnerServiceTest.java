@@ -95,6 +95,19 @@ class CodeRunnerServiceTest {
     }
 
     @Test
+    void compileErrorOnLineOneHidesTheInternalHeaderAndKeepsTheCaretAligned() {
+        String user = "public static int add(int a, int b) { return a +; }";
+        try (CompiledProgram p = runner.compile(user, ECHO_DRIVER)) {
+            assertFalse(p.isCompiled());
+            String[] lines = p.getCompileError().split("\n");
+            assertEquals("Solution.java:1: error: illegal start of expression", lines[0]);
+            assertEquals(user, lines[1], "source echo must be exactly what the user typed");
+            assertEquals(user.indexOf(';'), lines[2].indexOf('^'), "caret must point at the typo");
+            assertFalse(p.getCompileError().contains("import java"), p.getCompileError());
+        }
+    }
+
+    @Test
     void compileErrorsDoNotRevealServerPaths() {
         try (CompiledProgram p = runner.compile("this is not java", ECHO_DRIVER)) {
             assertFalse(p.isCompiled());

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -54,6 +55,10 @@ public class CodeRunnerService {
 
     private static final Pattern IMPORT_LINE =
             Pattern.compile("^\\s*import\\s+(static\\s+)?[\\w.]+(\\.\\*)?\\s*;\\s*$");
+
+    /** The hidden first-line prefix of Solution.java: all imports followed by the class declaration. */
+    private static final Pattern HEADER =
+            Pattern.compile("^(?:import\\s+(?:static\\s+)?[\\w.*]+;)+public class Solution \\{");
 
     private static final String DEFAULT_IMPORTS =
             "import java.util.*;import java.util.function.*;import java.util.stream.*;import java.io.*;";
@@ -246,9 +251,21 @@ public class CodeRunnerService {
         String withoutPaths = text.replace(dir.toString() + "/", "").replace(dir.toString(), "");
         StringBuilder out = new StringBuilder();
         int lines = 0;
+        int strippedFromPrevious = 0;
         for (String line : withoutPaths.split("\\R")) {
             if (line.startsWith("WARNING:") || line.startsWith("Picked up ")) {
                 continue;
+            }
+            // javac echoes the offending source line; on line 1 that includes our hidden header
+            // (imports + class declaration). Remove it, and shift the ^ marker line that follows.
+            Matcher header = HEADER.matcher(line);
+            if (header.find()) {
+                strippedFromPrevious = header.end();
+                line = line.substring(strippedFromPrevious);
+            } else if (strippedFromPrevious > 0) {
+                int shift = Math.min(strippedFromPrevious, line.length() - line.stripLeading().length());
+                line = line.substring(shift);
+                strippedFromPrevious = 0;
             }
             if (lines++ >= MAX_ERROR_MESSAGE_LINES) {
                 out.append("...\n");

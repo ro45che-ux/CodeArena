@@ -11,6 +11,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -55,6 +57,17 @@ public class SecurityConfig {
             .addFilterBefore(new JwtFilter(jwtUtil, userRepository), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    /**
+     * Authentication is done by JwtFilter, so no UserDetailsService is needed. Declaring this
+     * stops Spring Boot from creating a default user with a random password it prints to the log.
+     */
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return username -> {
+            throw new UsernameNotFoundException("Password login is not used; authenticate with a JWT");
+        };
     }
 
     @Bean
