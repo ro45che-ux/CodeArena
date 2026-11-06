@@ -276,17 +276,22 @@ class SecurityAndJudgingIntegrationTest {
     }
 
     @Test
-    void submissionsAreAttributedToTheTokenOwnerNotTheUrl() throws Exception {
+    void submissionsAreAttributedToTheTokenOwnerAndNoUserIdCanBeInjected() throws Exception {
         String token = register("Ivan", "ivan@example.com");
         register("Judy", "judy@example.com");
         Long judyId = users.findByEmail("judy@example.com").orElseThrow().getId();
 
-        // legacy URL form tries to claim Judy's id; the server must ignore it
-        mvc.perform(post("/submissions/" + problemId + "/" + judyId)
+        mvc.perform(post("/submissions/" + problemId)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.TEXT_PLAIN).content(GOOD))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.name").value("Ivan"));
+
+        // the old /{problemId}/{userId} URL form no longer exists
+        mvc.perform(post("/submissions/" + problemId + "/" + judyId)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.TEXT_PLAIN).content(GOOD))
+                .andExpect(status().is4xxClientError());
     }
 
     @Test

@@ -44,10 +44,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/hello", "/error").permitAll()
                 .requestMatchers("/auth/**").permitAll()
-                // public, read-only
-                .requestMatchers(HttpMethod.GET, "/problems", "/leaderboard/**", "/testcases/**").permitAll()
-                // content management is admin only
+                // content management is admin only (listed first: the first matching rule wins,
+                // and "/testcases/*/all" would otherwise match the public "/testcases/**" rule)
+                .requestMatchers(HttpMethod.GET, "/testcases/*/all").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/problems", "/testcases/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/testcases/**").hasRole("ADMIN")
+                // public, read-only
+                .requestMatchers(HttpMethod.GET, "/problems", "/problems/stats", "/leaderboard/**", "/testcases/**").permitAll()
                 .requestMatchers("/users/**").hasRole("ADMIN")
                 // judging requires a logged-in user
                 .requestMatchers("/submissions/**").authenticated()
@@ -90,7 +93,7 @@ public class SecurityConfig {
                         .filter(s -> !s.isEmpty())
                         .toList();
         configuration.setAllowedOrigins(origins);
-        configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(false);
         configuration.setMaxAge(3600L);

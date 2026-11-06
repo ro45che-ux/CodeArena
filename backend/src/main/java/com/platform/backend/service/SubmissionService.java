@@ -1,5 +1,6 @@
 package com.platform.backend.service;
 
+import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -44,8 +45,10 @@ public class SubmissionService {
     /** Limits how many submissions are compiled/run at the same time (protects the host). */
     private final Semaphore judgeSlots;
     private final int submissionsPerMinute;
+    private final int runsPerMinute;
 
     private final Map<Long, Deque<Long>> recentSubmissions = new ConcurrentHashMap<>();
+    private final Map<Long, Deque<Long>> recentRuns = new ConcurrentHashMap<>();
     private final Set<Long> inFlight = ConcurrentHashMap.newKeySet();
 
     public SubmissionService(ProblemRepository problemRepository,
@@ -53,16 +56,54 @@ public class SubmissionService {
                              SubmissionRepository submissionRepository,
                              CodeRunnerService runner,
                              @Value("${judge.max-concurrent:2}") int maxConcurrent,
-                             @Value("${judge.submissions-per-minute:10}") int submissionsPerMinute) {
+                             @Value("${judge.submissions-per-minute:10}") int submissionsPerMinute,
+                             @Value("${judge.runs-per-minute:30}") int runsPerMinute) {
         this.problemRepository = problemRepository;
         this.testCaseRepository = testCaseRepository;
         this.submissionRepository = submissionRepository;
         this.runner = runner;
         this.judgeSlots = new Semaphore(Math.max(1, maxConcurrent), true);
         this.submissionsPerMinute = submissionsPerMinute;
+        this.runsPerMinute = runsPerMinute;
     }
 
+    /** Judges against ALL test cases (hidden ones included) and stores the result. */
     public Submission submit(User user, Long problemId, String code) {
+        validateCode(code);
+        Problem problem = findProblem(problemId);
+
+        List<TestCase> testCases = testCaseRepository.findByProblemIdOrderByIdAsc(problemId);
+        if (testCases.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This problem has no test cases yet");
+        }
+
+        enforceRateLimit(user.getId(), recentSubmissions, submissionsPerMinute);
+        Submission result = judgeExclusively(user, problem, testCases, code);
+        result.setCreatedAt(Instant.now());
+        return submissionRepository.save(result);
+    }
+
+    /**
+     * "Run": judges against the example (non-hidden) test cases only and stores nothing. Meant for
+     * trying code quickly without using up a graded submission.
+     */
+    public Submission run(User user, Long problemId, String code) {
+        validateCode(code);
+        Problem problem = findProblem(problemId);
+
+        List<TestCase> examples = testCaseRepository.findByProblemIdOrderByIdAsc(problemId).stream()
+                .filter(tc -> !tc.isHidden())
+                .toList();
+        if (examples.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "This problem has no example test cases to run against");
+        }
+
+        enforceRateLimit(user.getId(), recentRuns, runsPerMinute);
+        return judgeExclusively(user, problem, examples, code);
+    }
+
+    private void validateCode(String code) {
         if (code == null || code.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code must not be empty");
         }
@@ -70,16 +111,15 @@ public class SubmissionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Code is too long (maximum " + MAX_CODE_LENGTH + " characters)");
         }
+    }
 
-        Problem problem = problemRepository.findById(problemId)
+    private Problem findProblem(Long problemId) {
+        return problemRepository.findById(problemId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Problem not found"));
+    }
 
-        List<TestCase> testCases = testCaseRepository.findByProblemIdOrderByIdAsc(problemId);
-        if (testCases.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "This problem has no test cases yet");
-        }
-
-        enforceRateLimit(user.getId());
+    /** One judging job per user at a time, and at most N jobs on the whole server. */
+    private Submission judgeExclusively(User user, Problem problem, List<TestCase> testCases, String code) {
         if (!inFlight.add(user.getId())) {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Your previous submission is still running");
@@ -87,7 +127,7 @@ public class SubmissionService {
         try {
             acquireSlot();
             try {
-                return submissionRepository.save(judge(user, problem, testCases, code));
+                return judge(user, problem, testCases, code);
             } finally {
                 judgeSlots.release();
             }
@@ -217,16 +257,16 @@ public class SubmissionService {
 
     // ---------------------------------------------------------------- throttling
 
-    private void enforceRateLimit(Long userId) {
+    private static void enforceRateLimit(Long userId, Map<Long, Deque<Long>> history, int limitPerMinute) {
         long now = System.currentTimeMillis();
-        Deque<Long> timestamps = recentSubmissions.computeIfAbsent(userId, k -> new ArrayDeque<>());
+        Deque<Long> timestamps = history.computeIfAbsent(userId, k -> new ArrayDeque<>());
         synchronized (timestamps) {
             while (!timestamps.isEmpty() && now - timestamps.peekFirst() > RATE_WINDOW_MS) {
                 timestamps.pollFirst();
             }
-            if (timestamps.size() >= submissionsPerMinute) {
+            if (timestamps.size() >= limitPerMinute) {
                 throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
-                        "Too many submissions. Please wait a minute and try again.");
+                        "Too many attempts. Please wait a minute and try again.");
             }
             timestamps.addLast(now);
         }

@@ -16,6 +16,12 @@
 ## 🚀 Key Features
 
 * **Sandboxed Code Execution Engine** – Compiles each submission once and runs it per test case in a locked-down child JVM: empty environment, Java Security Manager policy (no network, no process creation, no file writes, no reads outside the JDK and its own temp directory), heap/stack/CPU limits, wall-clock timeout and output cap. See [Security model](#-security-model) for what this does and does not protect against.
+* **Run vs Submit** – *Run* (Ctrl/Cmd+Enter) checks the example test cases only and stores nothing; *Submit* grades against every test case, hidden ones included.
+* **Monaco Editor** – The VS Code editor with Java highlighting; your draft is kept per problem so a refresh never loses work.
+* **Submission History** – Every graded attempt per problem with verdict, runtime and source code you can reload into the editor.
+* **Progress & Stats** – Solved markers, search and difficulty/status filters, per-problem acceptance rate, and a profile page with a difficulty breakdown and recent activity.
+* **Admin Panel** – Admins create problems and add/delete (hidden) test cases from the UI.
+* **CI** – GitHub Actions runs the backend tests (Java 21) and the frontend tests and build on every push.
 * **Clear Verdicts** – Accepted, Wrong Answer, Time Limit Exceeded, and Error (compile errors with line numbers, runtime errors, memory/output limits).
 * **Automated Test Case Evaluation** – Validates user output against multiple hidden test cases directly from the PostgreSQL database.
 * **Leaderboard** – Best submission per user for each problem, ranked by score and then by run time. The public API exposes only display names and scores.
@@ -117,7 +123,7 @@ Every reference solution in `seed_problems.sql` was run through the real judge a
 | Data exposure | Password hashes, e-mails, other users' code and the problem driver code are never returned. Hidden test cases are never listed; wrong answers on hidden cases reveal no input/expected output |
 | CORS | Only origins in `CORS_ALLOWED_ORIGINS` |
 | Judge isolation | Empty environment (no DB password/JWT secret visible), Security Manager policy for submitted code, heap/stack/CPU/output/time limits, runs as an unprivileged OS user in Docker |
-| Abuse control | 10 submissions/minute/user, one running submission per user, at most 2 judged at once (`JUDGE_*` variables), request-size limit |
+| Abuse control | 10 graded submissions + 30 runs per minute per user, one running submission per user, at most 2 judged at once (`JUDGE_*` variables), request-size limit |
 
 **Making someone an admin:** register normally, then run `UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';`
 
@@ -135,18 +141,32 @@ Every reference solution in `seed_problems.sql` was run through the real judge a
 | `JWT_SECRET` | Token signing secret, 32+ chars. **Set in production** | random per start |
 | `CORS_ALLOWED_ORIGINS` | Comma-separated front-end origins | localhost + the Render front-end |
 | `JUDGE_RUN_TIMEOUT_MS` / `JUDGE_MEMORY_MB` | Per-test time and heap limits | 5000 / 128 |
-| `JUDGE_MAX_CONCURRENT` / `JUDGE_SUBMISSIONS_PER_MINUTE` | Throttling | 2 / 10 |
+| `JUDGE_MAX_CONCURRENT` / `JUDGE_SUBMISSIONS_PER_MINUTE` / `JUDGE_RUNS_PER_MINUTE` | Throttling | 2 / 10 / 30 |
 | `JUDGE_ALLOW_UNSANDBOXED` | Allow running without the Security Manager (Java 24+, dev only) | `false` |
 | `REACT_APP_API_URL` | Backend URL baked into the front-end build | the Render backend |
 
 ## 🧪 Tests
 
 ```bash
-cd backend && mvn test      # use JDK 17-21 (the sandbox tests are skipped on Java 24+)
+cd backend  && mvn test                          # use JDK 17-21 (sandbox tests are skipped on Java 24+)
+cd frontend && npm test -- --watchAll=false
 ```
-The suite compiles and runs real hostile programs (infinite loops, memory hogs, output floods, file/network/process/reflection access, reading the parent's environment) and checks auth, authorization, CORS and data-exposure rules end to end.
+* **Backend (39 tests):** the sandbox suite compiles and runs real hostile programs (infinite loops, memory hogs, output floods, file/network/process/reflection access, reading the parent's environment); integration tests cover auth, authorization, CORS, data exposure, Run vs Submit, history, progress, statistics and the admin endpoints.
+* **Frontend (11 tests):** login/registration rendering and the filtering/formatting helpers.
 
 ---
+
+## 🔌 API Overview
+
+| Endpoint | Access | Purpose |
+|---|---|---|
+| `POST /auth/register`, `/auth/login` | public | Create account / get a JWT |
+| `GET /problems`, `/problems/stats`, `/testcases/{id}`, `/leaderboard/{id}` | public | Problems, acceptance rates, example cases, rankings |
+| `POST /submissions/{id}/run` | login | Run against example cases only (not stored) |
+| `POST /submissions/{id}` | login | Graded submission (all cases, stored) |
+| `GET /submissions/mine?problemId=`, `GET /submissions/{id}` | login | Own history / one own submission with code |
+| `GET /me/progress` | login | Solved/attempted problems, difficulty breakdown, recent activity |
+| `POST /problems`, `POST /testcases/{id}`, `GET /testcases/{id}/all`, `DELETE /testcases/case/{id}`, `/users` | admin | Content and user management |
 
 ## 📖 Future Improvements
 - [ ] Add support for multiple languages (Python, C++).

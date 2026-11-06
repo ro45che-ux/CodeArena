@@ -34,6 +34,10 @@ public class Submission {
     private int totalCount;
     private long executionTimeMs;
 
+    /** When the submission was judged. Null for rows created before this column existed. */
+    @Column(name = "created_at")
+    private java.time.Instant createdAt;
+
     /** Human readable detail (compiler error, failing test, ...). Returned to the client, not stored. */
     @Transient
     private String message;
@@ -124,6 +128,14 @@ public class Submission {
 
     public void setStatus(SubmissionStatus status) {
         this.status = status;
+    }
+
+    public java.time.Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(java.time.Instant createdAt) {
+        this.createdAt = createdAt;
     }
 
     public String getMessage() {
